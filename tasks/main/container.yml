@@ -1,0 +1,77 @@
+---
+
+- name: Create data directory
+  ansible.builtin.file:
+    path: "{{ host_volume.path }}"
+    state: directory
+    owner: "{{ host_volume.owner | default(omit) }}"
+    group: "{{ host_volume.group | default(omit) }}"
+  loop: "{{ container.host_volumes | default([]) }}"
+  loop_control:
+    loop_var: host_volume
+
+- name: Create configs
+  ansible.builtin.template:
+    src: "{{ inventory_hostname }}/{{ config_file.template }}"
+    dest: /{{ container_data_path }}/{{ config_file.template | relpath | regex_replace(config_file.template | basename, '') }}/{{ config_file.template | basename | regex_replace('\.j2$', '') }}
+    owner: 1001
+    group: 1001
+    backup: yes
+  loop: "{{ container.config_files | default([]) }}"
+  loop_control:
+    loop_var: config_file
+
+- name: Create a podman network
+  containers.podman.podman_network:
+    name: "{{ container_network_name }}"
+
+- name: "Pull container for {{ container.name }}"
+  containers.podman.podman_image:
+    name: "{{ container.image }}"
+    arch: "{{ container.image_arch | default(omit) }}"
+  register: pull_container_reg
+
+- name: Show pull result
+  when: pull_container_reg is changed
+  ansible.builtin.debug:
+    msg: "{{ pull_container_reg }}"
+
+- name: "Deploy podman container {{ container.name }}"
+  containers.podman.podman_container:
+    name: "{{ container.name }}"
+    image: "{{ container.image }}"
+    command: "{{ container.command | default(omit) }}"
+    device: "{{ container.device | default([]) }}"
+    dns: "{{ container.dns | default(omit) }}"
+    dns_search: "{{ container.dns_search | default(omit) }}"
+    env: "{{ container.env }}"
+    expose: "{{ container.expose | default([]) }}"
+    generate_systemd:
+      names: "{{ container.systemd.use_container_name | default(container_systemd_use_container_name) }}"
+      path: "{{ container.systemd.path | default(container_systemd_path) }}"
+      restart_policy: "{{ container.systemd.restart_policy | default(omit) }}"
+      time: "{{ container.systemd.time | default(container_systemd_time) }}"
+      container_prefix: "{{ container.systemd.container_prefix | default(omit) }}"
+      requires: "{{ container.systemd.requires | default(omit) }}"
+      wants: "{{ container.systemd.wants | default(omit) }}"
+    group_add: "{{ container.group_add | default(omit) }}"
+    network: "{{ container.network | default(omit) }}"
+    ports: "{{ container.ports | default([]) }}"
+    privileged: "{{ container.privileged | default(omit) }}"
+    recreate: "{{ container.recreate | default(omit) }}"
+    state: "{{ container.state | default('absent') }}"
+    user: "{{ container.user | default(omit) }}"
+    volume: "{{ container.volume | default([]) }}"
+  register: deploy_reg
+
+- name: Show deploy result
+  when: deploy_reg is changed
+  ansible.builtin.debug:
+    msg: "{{ deploy_reg }}"
+
+- name: Enable and start systemd service
+  ansible.builtin.systemd:
+    name: "{{ container.systemd_container_prefix | default('container') }}-{{ container.name }}.service"
+    state: "{{ container.systemd.state | default('started') }}"
+    enabled: "{{ container.systemd.enabled | default('true') }}"
+    daemon_reload: true

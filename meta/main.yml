@@ -1,0 +1,9 @@
+galaxy_info:
+  author: jefffermo
+  description: Deploy containers using podman
+  company: 
+  license: license (BSD, MIT)
+  min_ansible_version: 2.10
+  galaxy_tags:
+    - container
+    - podman
