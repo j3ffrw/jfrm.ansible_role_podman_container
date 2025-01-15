@@ -5,3 +5,6 @@ container_systemd_time: "120"
 container_systemd_use_container_name: true
 container_data_path: "/data"
 container_network_name: ""
+container_template_paths:
+  - template
+  - /

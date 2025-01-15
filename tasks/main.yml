@@ -9,9 +9,9 @@
     label: "{{ item.container.name }}"
   vars:
     container: "{{ item.container }}"
-    filter_container: 
+    filter_container:
       "{{ podman_containers
           | dict2items(key_name='name', value_name='container')
-          | selectattr('name', 'match', select_container | default('.*'))
+          | selectattr('name', 'match', container_select | default('.*'))
           | list
       }}"
