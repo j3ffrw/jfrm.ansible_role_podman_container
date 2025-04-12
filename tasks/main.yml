@@ -1,5 +1,17 @@
 ---
 
+- name: Main | Deploy containers
+  ansible.builtin.debug:
+    msg: "Deploy {{ __filter_container }} from {{ podman_containers | list }}"
+    verbosity: 1
+  vars:
+    __filter_container:
+      "{{ podman_containers
+          | dict2items(key_name='key', value_name='value')
+          | selectattr('key', 'match', deploy_container_filter )
+          | items2dict | list
+      }}"
+
 - name: Deploy containers
   ansible.builtin.include_tasks:
     file: main/container.yml
@@ -12,6 +24,6 @@
     filter_container:
       "{{ podman_containers
           | dict2items(key_name='name', value_name='container')
-          | selectattr('name', 'match', container_select | default('.*'))
+          | selectattr('name', 'match', deploy_container_filter )
           | list
       }}"

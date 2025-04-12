@@ -8,3 +8,4 @@ container_network_name: ""
 container_template_paths:
   - template
   - /
+deploy_container_filter: ".*"
